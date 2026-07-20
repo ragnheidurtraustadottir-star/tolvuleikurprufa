@@ -14,15 +14,19 @@ const playerOneNameInput = document.querySelector("#playerOneName");
 const playerTwoNameInput = document.querySelector("#playerTwoName");
 const hint = document.querySelector("#hint");
 
-let player;
+let players = [];
 let food = [];
-let score = 0;
+let mode = "single";
 let running = false;
 let lastTime = 0;
 let highScore = Number.parseInt(localStorage.getItem("boltabitiHighScore") || "0", 10) || 0;
-let competition = null;
-
 const pointer = { x: 0, y: 0 };
+const keys = new Set();
+
+function dimensions() {
+  const rect = canvas.getBoundingClientRect();
+  return { width: rect.width, height: rect.height };
+}
 
 function resize() {
   const rect = canvas.getBoundingClientRect();
@@ -30,28 +34,29 @@ function resize() {
   canvas.width = Math.round(rect.width * scale);
   canvas.height = Math.round(rect.height * scale);
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
-
-  if (player) {
-    player.x = Math.max(player.radius, Math.min(rect.width - player.radius, player.x));
-    player.y = Math.max(player.radius, Math.min(rect.height - player.radius, player.y));
-  }
+  for (const player of players) keepOnBoard(player, rect.width, rect.height);
 }
 
-function dimensions() {
-  const rect = canvas.getBoundingClientRect();
-  return { width: rect.width, height: rect.height };
+function keepOnBoard(player, width, height) {
+  player.x = Math.max(player.radius, Math.min(width - player.radius, player.x));
+  player.y = Math.max(player.radius, Math.min(height - player.radius, player.y));
+}
+
+function newPlayer(name, x, y, color, glow, controls = null) {
+  return { name, x, y, radius: 20, score: 0, color, glow, controls, alive: true };
 }
 
 function makeOrb(forceEdible = false) {
   const { width, height } = dimensions();
+  const living = players.filter((player) => player.alive);
+  const referenceRadius = Math.max(20, ...living.map((player) => player.radius));
   const minRadius = 5;
-  const maxRadius = forceEdible
-    ? Math.max(minRadius, player.radius * 0.75)
-    : Math.min(42, player.radius * 1.65);
+  const maxRadius = forceEdible ? Math.max(minRadius, referenceRadius * 0.75) : Math.min(42, referenceRadius * 1.65);
   const radius = minRadius + Math.random() * Math.max(1, maxRadius - minRadius);
   let orb;
 
-  do {
+  // Never search forever for an empty spot when a large player fills the board.
+  for (let attempt = 0; attempt < 80; attempt += 1) {
     orb = {
       x: radius + Math.random() * Math.max(1, width - radius * 2),
       y: radius + Math.random() * Math.max(1, height - radius * 2),
@@ -61,59 +66,91 @@ function makeOrb(forceEdible = false) {
       pulseSpeed: 0.7 + Math.random() * 0.8,
       pulseDepth: 0.28 + Math.random() * 0.2
     };
-  } while (Math.hypot(orb.x - player.x, orb.y - player.y) < radius + player.radius + 70);
-
+    const safe = living.every((player) => Math.hypot(orb.x - player.x, orb.y - player.y) >= radius + player.radius + 35);
+    if (safe) return orb;
+  }
   return orb;
 }
 
-function resetRound() {
+function resetRound(selectedMode) {
+  mode = selectedMode;
   const { width, height } = dimensions();
-  player = { x: width / 2, y: height / 2, radius: 20 };
-  pointer.x = player.x;
-  pointer.y = player.y;
-  score = 0;
+  if (mode === "versus") {
+    const nameOne = playerOneNameInput.value.trim() || "Leikmaður 1";
+    const nameTwo = playerTwoNameInput.value.trim() || "Leikmaður 2";
+    players = [
+      newPlayer(nameOne, width * 0.25, height / 2, "#75b8ff", "#379bff", ["KeyW", "KeyS", "KeyA", "KeyD"]),
+      newPlayer(nameTwo, width * 0.75, height / 2, "#d6a8ff", "#a45cff", ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"])
+    ];
+  } else {
+    players = [newPlayer("Leikmaður", width / 2, height / 2, "#75b8ff", "#379bff")];
+    pointer.x = players[0].x;
+    pointer.y = players[0].y;
+  }
   food = Array.from({ length: 18 }, (_, index) => makeOrb(index < 12));
   updateStats();
 }
 
 function updateStats() {
-  scoreEl.textContent = competition?.turn === 1 ? competition.scores[0] : score;
-  sizeEl.textContent = Math.round(player.radius);
+  scoreEl.textContent = players[0]?.score ?? 0;
+  scoreTwoEl.textContent = players[1]?.score ?? 0;
+  sizeEl.textContent = Math.round(players[0]?.radius ?? 20);
   highScoreEl.textContent = highScore;
-  if (competition) scoreTwoEl.textContent = competition.turn === 1 ? score : 0;
 }
 
 function setPointer(event) {
+  if (mode !== "single") return;
   const rect = canvas.getBoundingClientRect();
   pointer.x = event.clientX - rect.left;
   pointer.y = event.clientY - rect.top;
 }
 
-function update(delta) {
+function movePlayers(delta) {
   const { width, height } = dimensions();
-  const follow = 1 - Math.pow(0.001, delta);
-  player.x += (pointer.x - player.x) * follow;
-  player.y += (pointer.y - player.y) * follow;
-  player.x = Math.max(player.radius, Math.min(width - player.radius, player.x));
-  player.y = Math.max(player.radius, Math.min(height - player.radius, player.y));
-
-  for (let index = food.length - 1; index >= 0; index -= 1) {
-    const orb = food[index];
-    orb.pulse += delta * orb.pulseSpeed;
-    orb.radius = orb.baseRadius * (1 + Math.sin(orb.pulse) * orb.pulseDepth);
-    const touching = Math.hypot(player.x - orb.x, player.y - orb.y) < player.radius + orb.radius;
-    if (!touching) continue;
-
-    if (player.radius > orb.radius * 1.08) {
-      player.radius = Math.sqrt(player.radius ** 2 + orb.radius ** 2 * 0.38);
-      score += Math.max(1, Math.round(orb.radius));
-      food.splice(index, 1, makeOrb(Math.random() < 0.65));
-      updateStats();
-    } else if (orb.radius > player.radius * 1.08) {
-      endRound();
-      return;
+  if (mode === "single") {
+    const player = players[0];
+    const follow = 1 - Math.pow(0.001, delta);
+    player.x += (pointer.x - player.x) * follow;
+    player.y += (pointer.y - player.y) * follow;
+  } else {
+    for (const player of players) {
+      if (!player.alive) continue;
+      const [up, down, left, right] = player.controls;
+      let dx = Number(keys.has(right)) - Number(keys.has(left));
+      let dy = Number(keys.has(down)) - Number(keys.has(up));
+      if (dx && dy) { dx *= Math.SQRT1_2; dy *= Math.SQRT1_2; }
+      player.x += dx * 230 * delta;
+      player.y += dy * 230 * delta;
     }
   }
+  for (const player of players) keepOnBoard(player, width, height);
+}
+
+function update(delta) {
+  movePlayers(delta);
+  for (const orb of food) {
+    orb.pulse += delta * orb.pulseSpeed;
+    orb.radius = orb.baseRadius * (1 + Math.sin(orb.pulse) * orb.pulseDepth);
+  }
+
+  for (const player of players) {
+    if (!player.alive) continue;
+    for (let index = food.length - 1; index >= 0; index -= 1) {
+      const orb = food[index];
+      if (Math.hypot(player.x - orb.x, player.y - orb.y) >= player.radius + orb.radius) continue;
+      if (player.radius > orb.radius * 1.08) {
+        player.radius = Math.sqrt(player.radius ** 2 + orb.radius ** 2 * 0.38);
+        player.score += Math.max(1, Math.round(orb.radius));
+        food.splice(index, 1, makeOrb(Math.random() < 0.65));
+        updateStats();
+      } else if (orb.radius > player.radius * 1.08) {
+        player.alive = false;
+        if (mode === "single") { endRound(); return; }
+        break;
+      }
+    }
+  }
+  if (mode === "versus" && players.some((player) => !player.alive)) endRound();
 }
 
 function circle(x, y, radius, fill, glow) {
@@ -138,25 +175,28 @@ function draw() {
   for (let y = 0; y < height; y += 40) {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
   }
-
+  const largest = Math.max(20, ...players.filter((player) => player.alive).map((player) => player.radius));
   for (const orb of food) {
-    const edible = player.radius > orb.radius * 1.08;
+    const edible = largest > orb.radius * 1.08;
     circle(orb.x, orb.y, orb.radius, edible ? "#6ee7a8" : "#ff6b7a", edible ? "#46dda0" : "#ff4058");
   }
-  circle(player.x, player.y, player.radius, "#75b8ff", "#379bff");
-  circle(player.x - player.radius * .25, player.y - player.radius * .25, player.radius * .22, "#d9efff", "transparent");
+  for (const player of players) {
+    if (!player.alive) continue;
+    circle(player.x, player.y, player.radius, player.color, player.glow);
+    circle(player.x - player.radius * .25, player.y - player.radius * .25, player.radius * .22, "#d9efff", "transparent");
+  }
 }
 
 function frame(time) {
-  const delta = Math.min((time - lastTime) / 1000, 0.035);
+  const delta = Math.min(Math.max(0, (time - lastTime) / 1000), 0.035);
   lastTime = time;
   if (running) update(delta);
   draw();
   requestAnimationFrame(frame);
 }
 
-function startRound() {
-  resetRound();
+function startRound(selectedMode) {
+  resetRound(selectedMode);
   playerNames.classList.add("hidden");
   message.classList.add("hidden");
   running = true;
@@ -164,38 +204,31 @@ function startRound() {
 }
 
 function showMainChoices(text) {
+  message.querySelector("h2").textContent = "Leik lokið";
   message.querySelector("p").textContent = text;
   playerNames.classList.remove("hidden");
   startButton.classList.remove("hidden");
   twoPlayerButton.classList.remove("hidden");
-  startButton.textContent = "Einn leikmaður";
-  twoPlayerButton.textContent = "Hefja keppni";
+  startButton.textContent = "Spila aftur einn";
+  twoPlayerButton.textContent = "Ný tveggja manna keppni";
+  message.classList.remove("hidden");
 }
 
 function startSinglePlayer() {
-  competition = null;
   playerOneStat.firstChild.textContent = "Stig ";
   playerTwoStat.classList.add("hidden");
-  hint.textContent = "Boltar stækka og minnka. Grænir eru ætir; bíddu eftir að rauðir minnki eða farðu fram hjá þeim.";
-  startRound();
+  hint.textContent = "Stýrðu með mús eða fingri. Grænir boltar eru ætir; forðastu rauða.";
+  startRound("single");
 }
 
-function competitionAction() {
-  if (!competition) {
-    competition = {
-      names: [playerOneNameInput.value.trim() || "Leikmaður 1", playerTwoNameInput.value.trim() || "Leikmaður 2"],
-      scores: [0, 0],
-      turn: 0
-    };
-    playerOneStat.firstChild.textContent = `${competition.names[0]} `;
-    playerTwoStat.firstChild.textContent = `${competition.names[1]} `;
-    playerTwoStat.classList.remove("hidden");
-    hint.textContent = `${competition.names[0]} spilar fyrst. Síðan fær ${competition.names[1]} sömu leikreglur.`;
-    startRound();
-    return;
-  }
-
-  if (competition.turn === 1) startRound();
+function startCompetition() {
+  const nameOne = playerOneNameInput.value.trim() || "Leikmaður 1";
+  const nameTwo = playerTwoNameInput.value.trim() || "Leikmaður 2";
+  playerOneStat.firstChild.textContent = `${nameOne} `;
+  playerTwoStat.firstChild.textContent = `${nameTwo} `;
+  playerTwoStat.classList.remove("hidden");
+  hint.textContent = `${nameOne}: WASD · ${nameTwo}: örvatakkar. Sá sem lifir lengur vinnur; stig ráða ef báðir falla.`;
+  startRound("versus");
 }
 
 function saveHighScore(value) {
@@ -205,42 +238,37 @@ function saveHighScore(value) {
 }
 
 function endRound() {
+  if (!running) return;
   running = false;
-  saveHighScore(score);
+  keys.clear();
+  for (const player of players) saveHighScore(player.score);
   updateStats();
-  message.querySelector("h2").textContent = "Leik lokið";
-
-  if (!competition) {
-    showMainChoices(`Þú fékkst ${score} stig. Hæsta skor: ${highScore}.`);
-  } else if (competition.turn === 0) {
-    competition.scores[0] = score;
-    competition.turn = 1;
-    scoreEl.textContent = competition.scores[0];
-    scoreTwoEl.textContent = 0;
-    message.querySelector("p").textContent = `${competition.names[0]} fékk ${score} stig. Nú er komið að ${competition.names[1]}.`;
-    playerNames.classList.add("hidden");
-    startButton.classList.add("hidden");
-    twoPlayerButton.textContent = `${competition.names[1]} byrjar`;
-  } else {
-    competition.scores[1] = score;
-    scoreTwoEl.textContent = score;
-    const [first, second] = competition.scores;
-    const result = first === second
-      ? `Jafntefli, ${first}–${second}!`
-      : `${competition.names[first > second ? 0 : 1]} vinnur, ${first}–${second}!`;
-    competition = null;
-    showMainChoices(`${result} Hæsta skor: ${highScore}.`);
+  if (mode === "single") {
+    showMainChoices(`Þú fékkst ${players[0].score} stig. Hæsta skor: ${highScore}.`);
+    return;
   }
-  message.classList.remove("hidden");
+
+  const [first, second] = players;
+  let result;
+  if (first.alive !== second.alive) result = `${first.alive ? first.name : second.name} vinnur!`;
+  else if (first.score === second.score) result = `Jafntefli, ${first.score}–${second.score}!`;
+  else result = `${first.score > second.score ? first.name : second.name} vinnur, ${first.score}–${second.score}!`;
+  showMainChoices(`${result} Hæsta skor: ${highScore}.`);
 }
 
 canvas.addEventListener("pointermove", setPointer);
 canvas.addEventListener("pointerdown", setPointer);
 startButton.addEventListener("click", startSinglePlayer);
-twoPlayerButton.addEventListener("click", competitionAction);
+twoPlayerButton.addEventListener("click", startCompetition);
+window.addEventListener("keydown", (event) => {
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) event.preventDefault();
+  keys.add(event.code);
+});
+window.addEventListener("keyup", (event) => keys.delete(event.code));
+window.addEventListener("blur", () => keys.clear());
 window.addEventListener("resize", resize);
 
 resize();
-resetRound();
+resetRound("single");
 highScoreEl.textContent = highScore;
 requestAnimationFrame(frame);
