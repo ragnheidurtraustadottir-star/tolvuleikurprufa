@@ -45,7 +45,10 @@ function makeOrb(forceEdible = false) {
       x: radius + Math.random() * Math.max(1, width - radius * 2),
       y: radius + Math.random() * Math.max(1, height - radius * 2),
       radius,
-      pulse: Math.random() * Math.PI * 2
+      baseRadius: radius,
+      pulse: Math.random() * Math.PI * 2,
+      pulseSpeed: 0.7 + Math.random() * 0.8,
+      pulseDepth: 0.28 + Math.random() * 0.2
     };
   } while (Math.hypot(orb.x - player.x, orb.y - player.y) < radius + player.radius + 70);
 
@@ -58,7 +61,7 @@ function resetGame() {
   pointer.x = player.x;
   pointer.y = player.y;
   score = 0;
-  food = Array.from({ length: 24 }, (_, index) => makeOrb(index < 10));
+  food = Array.from({ length: 18 }, (_, index) => makeOrb(index < 12));
   updateStats();
 }
 
@@ -83,14 +86,15 @@ function update(delta) {
 
   for (let index = food.length - 1; index >= 0; index -= 1) {
     const orb = food[index];
-    orb.pulse += delta * 2;
+    orb.pulse += delta * orb.pulseSpeed;
+    orb.radius = orb.baseRadius * (1 + Math.sin(orb.pulse) * orb.pulseDepth);
     const touching = Math.hypot(player.x - orb.x, player.y - orb.y) < player.radius + orb.radius;
     if (!touching) continue;
 
     if (player.radius > orb.radius * 1.08) {
       player.radius = Math.sqrt(player.radius ** 2 + orb.radius ** 2 * 0.38);
       score += Math.max(1, Math.round(orb.radius));
-      food.splice(index, 1, makeOrb());
+      food.splice(index, 1, makeOrb(Math.random() < 0.65));
       updateStats();
     } else if (orb.radius > player.radius * 1.08) {
       endGame();
@@ -125,8 +129,7 @@ function draw() {
 
   for (const orb of food) {
     const edible = player.radius > orb.radius * 1.08;
-    const pulse = 1 + Math.sin(orb.pulse) * 0.035;
-    circle(orb.x, orb.y, orb.radius * pulse, edible ? "#6ee7a8" : "#ff6b7a", edible ? "#46dda0" : "#ff4058");
+    circle(orb.x, orb.y, orb.radius, edible ? "#6ee7a8" : "#ff6b7a", edible ? "#46dda0" : "#ff4058");
   }
 
   circle(player.x, player.y, player.radius, "#75b8ff", "#379bff");
