@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="is">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Boltabiti</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game-shell">
+    <header>
+      <div>
+        <p class="eyebrow">Tölvuleikur prufa</p>
+        <h1>Boltabiti</h1>
+      </div>
+      <div class="stats" aria-live="polite">
+        <span>Stig <strong id="score">0</strong></span>
+        <span>Stærð <strong id="size">20</strong></span>
+      </div>
+    </header>
+
+    <section class="game-wrap">
+      <canvas id="game" aria-label="Leiksvæði Boltabita"></canvas>
+      <div id="message" class="message">
+        <h2>Éttu minni bolta</h2>
+        <p>Færðu músina eða fingurinn til að stýra.</p>
+        <button id="startButton" type="button">Byrja leik</button>
+      </div>
+    </section>
+
+    <p class="hint">Grænir boltar eru ætir. Rauðir boltar eru of stórir — forðastu þá.</p>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
