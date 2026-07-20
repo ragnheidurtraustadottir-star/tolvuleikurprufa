@@ -14,8 +14,10 @@
         <h1>Boltabiti</h1>
       </div>
       <div class="stats" aria-live="polite">
-        <span>Stig <strong id="score">0</strong></span>
-        <span>Stærð <strong id="size">20</strong></span>
+        <span id="playerOneStat">Stig <strong id="score">0</strong></span>
+        <span id="playerTwoStat" class="hidden">Stig 2 <strong id="scoreTwo">0</strong></span>
+        <span>Hæsta skor <strong id="highScore">0</strong></span>
+        <span id="sizeStat">Stærð <strong id="size">20</strong></span>
       </div>
     </header>
 
@@ -24,11 +26,18 @@
       <div id="message" class="message">
         <h2>Éttu minni bolta</h2>
         <p>Færðu músina eða fingurinn til að stýra.</p>
-        <button id="startButton" type="button">Byrja leik</button>
+        <div class="player-names">
+          <label>Leikmaður 1 <input id="playerOneName" maxlength="18" placeholder="Nafn leikmanns 1"></label>
+          <label>Leikmaður 2 <input id="playerTwoName" maxlength="18" placeholder="Nafn leikmanns 2"></label>
+        </div>
+        <div class="mode-buttons">
+          <button id="startButton" type="button">Einn leikmaður</button>
+          <button id="twoPlayerButton" class="secondary" type="button">Hefja keppni</button>
+        </div>
       </div>
     </section>
 
-    <p class="hint">Boltar stækka og minnka. Grænir eru ætir; bíddu eftir að rauðir minnki eða farðu fram hjá þeim.</p>
+    <p id="hint" class="hint">Boltar stækka og minnka. Grænir eru ætir; bíddu eftir að rauðir minnki eða farðu fram hjá þeim.</p>
   </main>
   <script src="game.js"></script>
 </body>

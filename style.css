@@ -32,7 +32,7 @@ h1, p { margin: 0; }
 h1 { font-size: clamp(2rem, 6vw, 4rem); line-height: .9; }
 .eyebrow { color: #77e6b6; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 
-.stats { display: flex; gap: .65rem; }
+.stats { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .65rem; }
 .stats span {
   min-width: 90px;
   padding: .65rem .9rem;
@@ -69,8 +69,23 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   backdrop-filter: blur(5px);
 }
 .message.hidden { display: none; }
+.hidden { display: none !important; }
 .message h2 { margin: 0; font-size: clamp(1.8rem, 5vw, 3.4rem); }
 .message p, .hint { color: #adc1d6; }
+
+.player-names { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; width: min(100%, 420px); }
+.player-names label { display: grid; gap: .3rem; color: #adc1d6; font-size: .82rem; text-align: left; }
+.player-names input {
+  width: 100%;
+  border: 1px solid #ffffff2e;
+  border-radius: 10px;
+  padding: .65rem .75rem;
+  background: #ffffff10;
+  color: white;
+  font: inherit;
+}
+.player-names input:focus { outline: 2px solid #77e6b6; outline-offset: 1px; }
+.mode-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: .7rem; }
 
 button {
   margin-top: .55rem;
@@ -84,10 +99,13 @@ button {
   cursor: pointer;
 }
 button:hover { background: #a5f4d2; transform: translateY(-1px); }
+button.secondary { background: #bca7ff; color: #180f35; }
+button.secondary:hover { background: #d2c5ff; }
 .hint { padding: .8rem .25rem; text-align: center; font-size: .9rem; }
 
 @media (max-width: 560px) {
   header { align-items: center; }
   .stats span { min-width: 70px; padding: .5rem .65rem; }
   .game-wrap { height: 70vh; }
+  .player-names { grid-template-columns: 1fr; }
 }
