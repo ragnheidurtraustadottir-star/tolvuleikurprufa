@@ -34,5 +34,35 @@ Leikurinn er spilanlegur í vafra og allar breytingar sem fara á `main` eru bir
 
 - Fínstilla hraða og erfiðleikastig eftir meiri spilaprófun.
 - Bæta við hljóðum og einföldum sjónrænum áhrifum þegar bolti er étinn.
-- Bæta við hæsta skori sem vistast í vafranum.
 - Skoða hreyfingu aukabolta um leiksvæðið.
+
+## Viðbót – frysting og tveggja manna keppni
+
+Síðar í sömu vinnulotu var lagfærð villa sem gat fryst leikinn og komið í veg fyrir að hægt væri að byrja aftur. Einnig var tveggja manna hamnum breytt úr lotuskiptum leik í beina keppni þar sem báðir spila samtímis á sama borði.
+
+### Villugreining og lagfæring
+
+- Frystingin stafaði af endalausri leit að lausum stað fyrir nýjan bolta þegar leikmaðurinn var orðinn mjög stór.
+- Leit að staðsetningu hefur nú hámark upp á 80 tilraunir og getur því ekki lengur stöðvað leikjalykkjuna.
+- Endurræsing býr til nýja leikmenn, ný stig og nýja bolta í hvert skipti.
+- Virkir lyklar eru hreinsaðir við leikslok og þegar vafraglugginn missir fókus.
+
+### Tveggja manna hamur
+
+- Báðir leikmenn spila nú samtímis og keppa um boltana á sama leiksvæði.
+- Leikmaður 1 stýrir með `W`, `A`, `S` og `D`.
+- Leikmaður 2 stýrir með örvatökkunum.
+- Leikmenn hafa sitt hvorn litinn, nafnið og stigateljarann.
+- Sá sem lifir lengur vinnur; stig ráða úrslitum ef báðir falla saman.
+- Hægt er að hefja nýja tveggja manna keppni beint úr leikslokaskjánum.
+
+### GitHub og útgáfa
+
+- Breytingarnar voru vistaðar í commit `0e4d699` með skilaboðunum `Fix game restart and add live two-player mode`.
+- Commit-inu var ýtt á `main` í GitHub-geymslunni.
+- GitHub Actions birti nýju útgáfuna með góðum árangri.
+- Staðfest var að birta síðan svaraði með `200 OK` og innihéldi nýja tveggja manna haminn.
+
+### Staða eftir breytingu
+
+Leikurinn er birtur á [GitHub Pages](https://ragnheidurtraustadottir-star.github.io/tolvuleikurprufa/) og nú er bæði hægt að spila einn með mús eða fingri og tvo samtímis með lyklaborði.
